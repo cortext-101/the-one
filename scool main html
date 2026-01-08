@@ -1,142 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Discord-Style Chat</title>
-
-<!-- PeerJS (WebRTC, no backend) -->
+<title>Discord-Style Clone</title>
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
 <style>
 :root {
-  --bg: #313338;
-  --sidebar: #1e1f22;
-  --channel: #2b2d31;
-  --chat: #313338;
-  --input: #383a40;
-  --text: #dbdee1;
-  --muted: #949ba4;
-  --accent: #5865f2;
+  --bg:#313338; --sidebar:#1e1f22; --panel:#2b2d31;
+  --text:#dbdee1; --muted:#949ba4; --accent:#5865f2;
 }
-
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  height: 100vh;
-  display: flex;
-  font-family: "gg sans", Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+*{box-sizing:border-box}
+body{
+  margin:0; display:flex; height:100vh;
+  font-family:Arial; background:var(--bg); color:var(--text)
 }
+#servers{width:72px;background:var(--sidebar);padding:10px}
+.server{width:48px;height:48px;border-radius:50%;background:var(--accent);margin-bottom:10px}
 
-/* SERVER BAR */
-#servers {
-  width: 72px;
-  background: #1e1f22;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 10px;
-}
+#channels{width:240px;background:var(--panel);padding:10px}
+.channel{padding:6px;cursor:pointer;color:var(--muted)}
+.channel.active{background:#3f4147;color:white;border-radius:4px}
 
-.server {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--accent);
-  margin-bottom: 10px;
-}
+#chat{flex:1;display:flex;flex-direction:column}
+#header{height:48px;background:var(--panel);display:flex;align-items:center;padding:10px}
+#messages{flex:1;padding:10px;overflow-y:auto}
+.msg{margin-bottom:8px}
+.user{font-weight:bold;margin-right:5px}
 
-/* CHANNEL BAR */
-#channels {
-  width: 240px;
-  background: var(--channel);
-  padding: 10px;
-}
+#input{padding:10px;background:var(--panel)}
+#input input{width:100%;padding:10px;border-radius:8px;border:none;background:#383a40;color:white}
 
-.channel {
-  padding: 8px;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.channel:hover {
-  background: #3f4147;
-  color: white;
-  border-radius: 4px;
-}
-
-/* CHAT */
-#chat-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-#header {
-  height: 48px;
-  background: #2b2d31;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  border-bottom: 1px solid #1f2023;
-}
-
-#messages {
-  flex: 1;
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.message {
-  margin-bottom: 12px;
-}
-
-.username {
-  font-weight: bold;
-  margin-right: 6px;
-}
-
-#input-bar {
-  padding: 10px;
-  background: #2b2d31;
-}
-
-#input-bar input {
-  width: 100%;
-  background: var(--input);
-  border: none;
-  color: white;
-  padding: 12px;
-  border-radius: 8px;
-  outline: none;
-}
-
-/* VIDEO */
-#video {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #000;
-  padding: 10px;
-  border-radius: 10px;
-}
-
-video {
-  width: 160px;
-  border-radius: 6px;
-  margin: 3px;
-}
-
-button {
-  background: var(--accent);
-  border: none;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-}
+#right{width:240px;background:var(--panel);padding:10px}
+button{background:var(--accent);border:none;color:white;padding:6px;border-radius:5px;cursor:pointer;margin-top:5px}
+input{width:100%;padding:6px;margin-top:5px;border-radius:5px;border:none}
+video{width:100%;margin-top:5px;border-radius:6px;background:black}
 </style>
 </head>
 
@@ -149,89 +47,134 @@ button {
 
 <!-- CHANNELS -->
 <div id="channels">
-  <h4>TEXT CHANNELS</h4>
-  <div class="channel"># general</div>
+  <h4>CHANNELS</h4>
+  <div id="channelList"></div>
+  <input id="newChannel" placeholder="New channel">
+  <button onclick="addChannel()">Add</button>
 </div>
 
 <!-- CHAT -->
-<div id="chat-area">
-  <div id="header"># general</div>
-
+<div id="chat">
+  <div id="header"># <span id="channelName"></span></div>
   <div id="messages"></div>
-
-  <div id="input-bar">
-    <input id="msg" placeholder="Message #general" />
+  <div id="input">
+    <input id="msg" placeholder="Message" />
   </div>
 </div>
 
-<!-- VIDEO -->
-<div id="video">
+<!-- FRIENDS -->
+<div id="right">
+  <h4>User</h4>
+  <b id="myName"></b>
+  <h4>Add Friend</h4>
+  <input id="friendName" placeholder="Friend username">
+  <button onclick="addFriend()">Add Friend</button>
+
+  <h4>Friends</h4>
+  <div id="friends"></div>
+
+  <h4>Call</h4>
   <video id="local" autoplay muted></video>
   <video id="remote" autoplay></video>
-  <br>
-  <input id="peerId" placeholder="Friend ID" style="width:100%;margin-top:5px">
-  <button onclick="connect()">Connect</button>
-  <button onclick="callPeer()">Call</button>
-  <p style="font-size:11px">Your ID: <span id="myId"></span></p>
 </div>
 
 <script>
-const peer = new Peer();
+// ---------- USER ----------
+const username = prompt("Choose a username (short):");
+document.getElementById("myName").innerText = username;
+
+// ---------- PEER ----------
+const peer = new Peer(username);
 let conn;
-let call;
-let localStream;
-const messages = document.getElementById("messages");
+let currentChannel = "general";
+let channels = ["general"];
+let friends = {};
+let streams;
 
-peer.on("open", id => {
-  document.getElementById("myId").innerText = id;
-});
-
-peer.on("connection", c => {
-  conn = c;
-  conn.on("data", addMessage);
-});
-
-peer.on("call", async incoming => {
-  localStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-  document.getElementById("local").srcObject = localStream;
-  incoming.answer(localStream);
-  incoming.on("stream", s => document.getElementById("remote").srcObject = s);
-});
-
-function connect() {
-  const id = document.getElementById("peerId").value;
-  conn = peer.connect(id);
-  conn.on("data", addMessage);
+// ---------- CHANNELS ----------
+function renderChannels(){
+  const list = document.getElementById("channelList");
+  list.innerHTML="";
+  channels.forEach(c=>{
+    const div=document.createElement("div");
+    div.className="channel"+(c===currentChannel?" active":"");
+    div.innerText="# "+c;
+    div.onclick=()=>switchChannel(c);
+    list.appendChild(div);
+  });
+  document.getElementById("channelName").innerText=currentChannel;
+}
+function addChannel(){
+  const c=document.getElementById("newChannel").value;
+  if(c && !channels.includes(c)){channels.push(c);renderChannels();}
+}
+function switchChannel(c){
+  currentChannel=c;
+  document.getElementById("messages").innerHTML="";
+  renderChannels();
 }
 
-document.getElementById("msg").addEventListener("keydown", e => {
-  if (e.key === "Enter") sendMsg();
+// ---------- CHAT ----------
+document.getElementById("msg").addEventListener("keydown",e=>{
+  if(e.key==="Enter")sendMsg();
+});
+function sendMsg(){
+  const text=msg.value;
+  if(!text||!conn)return;
+  addMsg(username,text);
+  conn.send({type:"msg",channel:currentChannel,user:username,text});
+  msg.value="";
+}
+function addMsg(u,t){
+  const d=document.createElement("div");
+  d.className="msg";
+  d.innerHTML=`<span class="user">${u}</span>${t}`;
+  messages.appendChild(d);
+  messages.scrollTop=messages.scrollHeight;
+}
+
+// ---------- FRIENDS ----------
+function addFriend(){
+  const f=document.getElementById("friendName").value;
+  conn=peer.connect(f);
+  conn.on("data",handleData);
+  friends[f]=conn;
+  renderFriends();
+}
+function renderFriends(){
+  const f=document.getElementById("friends");
+  f.innerHTML="";
+  Object.keys(friends).forEach(n=>{
+    const d=document.createElement("div");
+    d.innerText=n;
+    d.onclick=()=>conn=friends[n];
+    f.appendChild(d);
+  });
+}
+
+// ---------- DATA ----------
+peer.on("connection",c=>{
+  conn=c;
+  conn.on("data",handleData);
+});
+function handleData(d){
+  if(d.type==="msg" && d.channel===currentChannel){
+    addMsg(d.user,d.text);
+  }
+}
+
+// ---------- CALL ----------
+async function callFriend(name){
+  const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+  local.srcObject=stream;
+  const call=peer.call(name,stream);
+  call.on("stream",s=>remote.srcObject=s);
+}
+document.getElementById("friends").addEventListener("dblclick",e=>{
+  callFriend(e.target.innerText);
 });
 
-function sendMsg() {
-  const input = document.getElementById("msg");
-  const text = input.value;
-  if (!text || !conn) return;
-  addMessage({ user: "You", text });
-  conn.send({ user: "Friend", text });
-  input.value = "";
-}
-
-function addMessage(m) {
-  const div = document.createElement("div");
-  div.className = "message";
-  div.innerHTML = `<span class="username">${m.user}</span>${m.text}`;
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-async function callPeer() {
-  const id = document.getElementById("peerId").value;
-  localStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-  document.getElementById("local").srcObject = localStream;
-  call = peer.call(id, localStream);
-  call.on("stream", s => document.getElementById("remote").srcObject = s);
-}
+renderChannels();
 </script>
 
 </body>
